@@ -59,6 +59,22 @@ const yoga = createYoga({
                     name: String,
                     country: String,
                     register_by: ID): Author!,
+                createBook(
+                    id: ID,
+                    title: String,
+                    description: String,
+                    quantity: Int,
+                    price: Int,
+                    writted_by: Int,
+                    register_by: Int
+                updateBook(
+                    id: ID,
+                    title: String,
+                    description: String,
+                    quantity: Int,
+                    price: Int,
+                    writted_by: Int,
+                    register_by: Int,
             }
         `,
 
