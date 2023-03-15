@@ -3,6 +3,7 @@ import { createServer } from 'node:http'
 import {db} from '../db'
 import {Author} from '../Author'
 import {Book} from '../Book'
+import {Mutation} from '../resolvers/Mutation'
 
 
     //create schema
@@ -19,6 +20,7 @@ const yoga = createYoga({
                 id: ID!, 
                 name: String!,
                 lastName: String!,
+                email: String!, 
             }
             type Author {
                 id: ID!, 
@@ -35,6 +37,28 @@ const yoga = createYoga({
                 price: Int!,
                 writted_by: Author!,
                 register_by: User! 
+            }
+            type Mutation{
+                createUser(
+                    name: String!,
+                    lastName: String!, 
+                    email: String!, 
+                    password: String! ): User!,
+                updateUser(
+                    id: ID,
+                    name: String,
+                    lastName: String, 
+                    email: String, 
+                    password: String ): User!,
+                createAuthor(
+                    name: String,
+                    country: String,
+                    register_by: ID! ): Author!,
+                updateAuthor(
+                    id: ID,
+                    name: String,
+                    country: String,
+                    register_by: ID): Author!,
             }
         `,
 
@@ -66,6 +90,7 @@ const yoga = createYoga({
             },
             Author,
             Book,
+            Mutation, 
         }
     }),
     context: { db }
