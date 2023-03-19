@@ -1,25 +1,34 @@
-import { createSchema, createYoga, filter } from 'graphql-yoga'
-import { createServer } from 'node:http'
+import { createSchema, createYoga, filter, PubSub, createPubSub } from 'graphql-yoga'
+import { createServer, request } from 'node:http'
 import {db} from '../db'
 import {Author} from '../Author'
 import {Book} from '../Book'
 import {Mutation} from '../resolvers/Mutation'
+import {Subscription} from '../resolvers/Subscription'
+import { PrismaClient } from '@prisma/client'
+import {getUserId} from './utils'
 
 
+const prisma = new PrismaClient()
+
+const pubsub = createPubSub();
     //create schema
 const yoga = createYoga({
     schema: createSchema({
         typeDefs : `
             type Query{
                 hello(name: String): String!,
-                user(id : ID ): [ User!]!,
-                author (id : ID): [Author!]!, 
-                book (id : ID): [Book!]!,
+                user(id: ID ):User!,
+                users: [User!]!,
+                author(id : ID): Author!, 
+                authors: [Author!]!, 
+                book(id : ID): Book!,
+                books: [Book!]!,
             }
             type User {
                 id: ID!, 
                 name: String!,
-                lastName: String!,
+                lastname: String!,
                 email: String!, 
             }
             type Author {
@@ -39,42 +48,88 @@ const yoga = createYoga({
                 register_by: User! 
             }
             type Mutation{
-                createUser(
-                    name: String!,
-                    lastName: String!, 
-                    email: String!, 
-                    password: String! ): User!,
+                signUp(
+                    data: signUpInput
+                    ): AuthPayload!
+                login(
+                    data: loginInput
+                    ): AuthPayload!
                 updateUser(
                     id: ID,
-                    name: String,
-                    lastName: String, 
-                    email: String, 
-                    password: String ): User!,
+                    data: updateUserInput
+                    ): User!,
                 createAuthor(
-                    name: String,
-                    country: String,
-                    register_by: ID! ): Author!,
+                    data: createAuthorInput
+                    ): Author!,
                 updateAuthor(
                     id: ID,
-                    name: String,
-                    country: String,
-                    register_by: ID): Author!,
+                    data: updateAuthorInput
+                    ): Author!,
                 createBook(
-                    id: ID,
-                    title: String,
-                    description: String,
-                    quantity: Int,
-                    price: Int,
-                    writted_by: Int,
-                    register_by: Int
+                    data: createBookInput
+                    ): Book!,
                 updateBook(
-                    id: ID,
-                    title: String,
-                    description: String,
-                    quantity: Int,
-                    price: Int,
-                    writted_by: Int,
-                    register_by: Int,
+                    id: ID!,
+                    data: updateBookInput
+                    ): Book!,
+                deleteBook(id: ID!): Book!,
+            }
+
+            type Subscription{
+                count: Int!
+            }
+
+            input signUpInput{
+                name: String!,
+                lastname: String!, 
+                email: String!, 
+                password: String!,
+            }
+            input loginInput{
+                email: String!
+                password: String!
+            }
+
+            type AuthPayload{
+                user: User!,
+                token: String!
+            }
+
+            input updateUserInput{
+                name: String,
+                lastname: String, 
+                email: String, 
+                password: String, 
+            }
+
+            input createAuthorInput{
+                name: String,
+                country: String,
+                register_by: ID! 
+            }
+
+            input updateAuthorInput{
+                name: String,
+                country: String,
+                register_by: ID
+            }
+
+            input createBookInput{
+                title: String,
+                description: String,
+                quantity: Int,
+                price: Int,
+                writted_by: ID,
+                register_by: ID
+            }
+
+            input updateBookInput{
+                title: String,
+                description: String,
+                quantity: Int,
+                price: Int,
+                writted_by: ID,
+                register_by: ID
             }
         `,
 
@@ -83,33 +138,61 @@ const yoga = createYoga({
                 hello: (args) => {
                    return "Hola"
                 },
-                user(parent, {id}, context, info) {
-                     const { db } = context
+                user: (parent, {id}, {request ,prisma}, info) => {
 
-                     if(!id){
-                        return db.users
-                     }
-                     return db.users.filter(user => user.id === id)
+                    const userId = getUserId(request)
+
+                        return prisma.users.findUnique({
+                            where: { id: parseInt(id) },
+                     })  
                 },
-                author (parent, {id}, {db}, info){
-                    if(!id){
-                        return db.authors
-                    }
-                    return db.authors.filter(author => author.id === id)
+                users: (parent, {id}, {request,prisma}, info) => {
+
+                    const userId = getUserId(request)
+
+                       return prisma.users.findMany()
                 },
-                book (parent, {id}, {db}, info){
-                    if(!id){
-                        return db.books
-                    }
-                    return db.book.filter(book => book.id === id)
+                author (parent, {id}, {request,prisma}, info){
+    
+                    const userId = getUserId(request)
+
+                    return prisma.authors.findUnique({
+                        where: { id: parseInt(id) }, 
+                    })
+                },
+                authors (parent, {id}, {request,prisma}, info){
+                    
+                    const userId = getUserId(request)
+                    
+                    return prisma.authors.findMany()
+                },
+                book (parent, {id}, {request,prisma}, info){
+                    
+                    const userId = getUserId(request)
+
+                    return prisma.books.findUnique({
+                        where: { id: parseInt(id) },
+                    })
+                },
+                books (parent, {id}, {request,prisma}, info){
+                    
+                    const userId = getUserId(request)
+
+                    return prisma.books.findMany()
                 },
             },
             Author,
             Book,
             Mutation, 
+            Subscription, 
         }
     }),
-    context: { db }
+    context: request => { 
+        return{
+            db, pubsub, prisma,
+            ...request,  
+        } 
+    },
 })
 
 const server = createServer(yoga)
