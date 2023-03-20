@@ -19,11 +19,11 @@ const yoga = createYoga({
             type Query{
                 hello(name: String): String!,
                 user(id: ID ):User!,
-                users: [User!]!,
+                users(take: Int, skip: Int, orderBy:UsersOrderByInput): [User!]!,
                 author(id : ID): Author!, 
-                authors: [Author!]!, 
+                authors(take: Int, skip: Int, orderBy:AuthorOrderByInput): [Author!]!, 
                 book(id : ID): Book!,
-                books: [Book!]!,
+                books(take: Int, skip: Int, orderBy:BooksOrderByInput): [Book!]!,
             }
             type User {
                 id: ID!, 
@@ -131,6 +131,29 @@ const yoga = createYoga({
                 writted_by: ID,
                 register_by: ID
             }
+
+            input AuthorOrderByInput{
+                id: OrderByArg
+                name: OrderByArg
+                country: OrderByArg
+            }
+
+            input UsersOrderByInput{
+                id: OrderByArg
+                name: OrderByArg
+                country: OrderByArg
+            }
+
+            input BooksOrderByInput{
+                id: OrderByArg
+                name: OrderByArg
+                country: OrderByArg
+            }
+
+            enum OrderByArg{
+                asc,
+                desc
+            }
         `,
 
         resolvers : {
@@ -146,11 +169,15 @@ const yoga = createYoga({
                             where: { id: parseInt(id) },
                      })  
                 },
-                users: (parent, {id}, {request,prisma}, info) => {
+                users: (parent, {take, skip, orderBy}, {request,prisma}, info) => {
 
                     const userId = getUserId(request)
 
-                       return prisma.users.findMany()
+                       return prisma.users.findMany({
+                        take,
+                        skip,
+                        orderBy,
+                       })
                 },
                 author (parent, {id}, {request,prisma}, info){
     
@@ -160,11 +187,15 @@ const yoga = createYoga({
                         where: { id: parseInt(id) }, 
                     })
                 },
-                authors (parent, {id}, {request,prisma}, info){
+                authors (parent, {take, skip, orderBy}, {request,prisma}, info){
                     
                     const userId = getUserId(request)
                     
-                    return prisma.authors.findMany()
+                    return prisma.authors.findMany({
+                        take,
+                        skip,
+                        orderBy,
+                    })
                 },
                 book (parent, {id}, {request,prisma}, info){
                     
@@ -174,11 +205,15 @@ const yoga = createYoga({
                         where: { id: parseInt(id) },
                     })
                 },
-                books (parent, {id}, {request,prisma}, info){
+                books (parent, {take, skip, orderBy}, {request,prisma}, info){
                     
                     const userId = getUserId(request)
 
-                    return prisma.books.findMany()
+                    return prisma.books.findMany({
+                        take,
+                        skip,
+                        orderBy, 
+                    })
                 },
             },
             Author,
